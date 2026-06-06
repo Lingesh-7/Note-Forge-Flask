@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NoteForge AI — Study Notes Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<!-- Background mesh -->
+<div class="bg-mesh" aria-hidden="true">
+  <div class="mesh-orb mesh-orb-1"></div>
+  <div class="mesh-orb mesh-orb-2"></div>
+  <div class="mesh-orb mesh-orb-3"></div>
+</div>
+
+<div class="layout">
+
+  <!-- ── HERO ── -->
+  <header class="hero">
+    <div class="hero-badge">Multi-Agent AI</div>
+    <h1 class="logo">NoteForge <span class="logo-ai">AI</span></h1>
+    <p class="tagline">Syllabus → exam-ready study notes in minutes.<br>Powered by LangGraph + Groq.</p>
+  </header>
+
+  <!-- ── PIPELINE DIAGRAM ── -->
+  <div class="pipeline-strip" aria-label="Agent pipeline">
+    <div class="pipe-step" data-node="planner">
+      <span class="pipe-icon">🧠</span><span>Planner</span>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step" data-node="researcher">
+      <span class="pipe-icon">🔍</span><span>Researcher</span>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step" data-node="writer">
+      <span class="pipe-icon">✍️</span><span>Writer</span>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step" data-node="critic">
+      <span class="pipe-icon">🔬</span><span>Critic</span>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step" data-node="exam_agent">
+      <span class="pipe-icon">📋</span><span>Exam Agent</span>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-step" data-node="formatter">
+      <span class="pipe-icon">📄</span><span>Formatter</span>
+    </div>
+  </div>
+
+  <!-- ── MAIN FORM ── -->
+  <main class="main-card">
+
+    <!-- STEP 1 — API KEY -->
+    <section class="step-section" id="step-api">
+      <div class="step-header">
+        <span class="step-num">01</span>
+        <div>
+          <h2 class="step-title">Groq API Key</h2>
+          <p class="step-sub">Free key — no credit card needed</p>
+        </div>
+        <div class="step-links">
+          <a href="https://console.groq.com/keys" target="_blank" class="pill-link">🔑 Get key</a>
+          <a href="https://youtu.be/nt1PJu47nTk?si=n0nlmzKDwcEU18ar" target="_blank" class="pill-link">▶ Watch guide</a>
+        </div>
+      </div>
+
+      <div class="input-wrap" id="api-key-wrap">
+        <input
+          type="password"
+          id="api_key"
+          name="api_key"
+          placeholder="gsk_…"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button type="button" class="toggle-vis" id="toggle-key" aria-label="Show/hide key">👁</button>
+      </div>
+      <div class="key-status" id="key-status" aria-live="polite"></div>
+      <div class="field-error" id="api-key-error"></div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- STEP 2 — SYLLABUS + PDF -->
+    <section class="step-section" id="step-syllabus">
+      <div class="step-header">
+        <span class="step-num">02</span>
+        <div>
+          <h2 class="step-title">Syllabus &amp; Reference</h2>
+          <p class="step-sub">One topic per line; use colon for subtopics</p>
+        </div>
+      </div>
+
+      <textarea
+        id="syllabus"
+        name="syllabus"
+        placeholder="Fuzzy Logic: Membership Functions, Fuzzy Sets, Defuzzification&#10;Neural Networks: Perceptron, Backpropagation, Activation Functions&#10;Clustering: K-Means, DBSCAN, Hierarchical"
+        rows="7"
+      ></textarea>
+      <div class="field-error" id="syllabus-error"></div>
+
+      <div class="upload-zone" id="upload-zone">
+        <input type="file" id="pdf_file" name="pdf_file" accept=".pdf" />
+        <div class="upload-inner">
+          <span class="upload-icon">📎</span>
+          <span class="upload-label">Drop your reference PDF here, or <u>click to browse</u></span>
+          <span class="upload-hint">Optional — notes will use web search if omitted</span>
+        </div>
+        <div class="upload-name" id="upload-name"></div>
+      </div>
+      <div class="field-error" id="pdf-error"></div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- STEP 3 — GENERATE -->
+    <section class="step-section" id="step-generate">
+      <div class="step-header">
+        <span class="step-num">03</span>
+        <div>
+          <h2 class="step-title">Generate Notes</h2>
+          <p class="step-sub">Sit back — the agents will handle everything</p>
+        </div>
+      </div>
+
+      <button type="button" id="generate-btn" class="btn-generate">
+        <span class="btn-text">⚡ Generate Notes</span>
+        <span class="btn-spinner" aria-hidden="true"></span>
+      </button>
+
+      <!-- Progress area -->
+      <div class="progress-area" id="progress-area" hidden>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+        </div>
+        <div class="progress-info">
+          <span class="progress-msg" id="progress-msg">Starting…</span>
+          <span class="progress-pct" id="progress-pct">0%</span>
+        </div>
+        <div class="agent-log" id="agent-log"></div>
+      </div>
+
+      <!-- Error banner -->
+      <div class="alert alert-error" id="gen-error" hidden></div>
+
+      <!-- Warning banner (rate-limit etc.) -->
+      <div class="alert alert-warn" id="gen-warn" hidden></div>
+    </section>
+
+  </main><!-- /.main-card -->
+
+  <!-- ── RESULTS SECTION ── -->
+  <section class="results-card" id="results-card" hidden>
+    <div class="results-header">
+      <h2 class="results-title">📚 Your Notes</h2>
+      <button id="download-btn" class="btn-download">⬇ Download PDF</button>
+    </div>
+
+    <div class="toc-panel" id="toc-panel">
+      <div class="toc-title">TABLE OF CONTENTS</div>
+      <ol class="toc-list" id="toc-list"></ol>
+    </div>
+
+    <div class="preview-content" id="preview-content"></div>
+  </section>
+
+</div><!-- /.layout -->
+
+<script>
+/* ─────────────────────────────────────────────────────────────────────────
+   NoteForge AI — client script (no framework, no bundler)
+   ─────────────────────────────────────────────────────────────────────── */
+
+const $ = id => document.getElementById(id);
+
+// ── Key visibility toggle ──────────────────────────────────────────────────
+$("toggle-key").addEventListener("click", () => {
+  const inp = $("api_key");
+  const btn = $("toggle-key");
+  if (inp.type === "password") { inp.type = "text";     btn.textContent = "🙈"; }
+  else                         { inp.type = "password"; btn.textContent = "👁"; }
+});
+
+// ── Live key validation (debounced 800 ms) ─────────────────────────────────
+let _keyTimer = null;
+let _lastKeyVal = "";
+
+$("api_key").addEventListener("input", () => {
+  clearTimeout(_keyTimer);
+  const val = $("api_key").value.trim();
+  if (val === _lastKeyVal) return;
+  _lastKeyVal = val;
+
+  const statusEl = $("key-status");
+  const errEl    = $("api-key-error");
+
+  if (!val) {
+    statusEl.innerHTML = "";
+    errEl.textContent  = "";
+    return;
+  }
+  if (!val.startsWith("gsk_")) {
+    statusEl.innerHTML = badge("warn", "⚠ Key must start with gsk_");
+    errEl.textContent  = "";
+    return;
+  }
+
+  statusEl.innerHTML = badge("checking", "⏳ Checking key…");
+  errEl.textContent  = "";
+
+  _keyTimer = setTimeout(() => validateKey(val), 800);
+});
+
+async function validateKey(key) {
+  const statusEl = $("key-status");
+  try {
+    const res  = await fetch("/validate-key", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ api_key: key }),
+    });
+    const data = await res.json();
+    if (data.valid) {
+      statusEl.innerHTML = badge("ok", "✓ API key verified");
+    } else {
+      statusEl.innerHTML = badge("err", `✗ ${data.error || "Invalid key"}`);
+    }
+  } catch {
+    statusEl.innerHTML = badge("warn", "⚠ Could not verify key");
+  }
+}
+
+function badge(type, text) {
+  return `<span class="key-badge key-badge-${type}">${text}</span>`;
+}
+
+// ── File upload UI ─────────────────────────────────────────────────────────
+const uploadZone = $("upload-zone");
+const fileInput  = $("pdf_file");
+
+uploadZone.addEventListener("click", e => {
+  if (e.target !== fileInput) fileInput.click();
+});
+uploadZone.addEventListener("dragover", e => {
+  e.preventDefault();
+  uploadZone.classList.add("drag-over");
+});
+uploadZone.addEventListener("dragleave", () => uploadZone.classList.remove("drag-over"));
+uploadZone.addEventListener("drop", e => {
+  e.preventDefault();
+  uploadZone.classList.remove("drag-over");
+  const files = e.dataTransfer.files;
+  if (files.length) {
+    fileInput.files = files;
+    fileInput.dispatchEvent(new Event("change"));
+  }
+});
+fileInput.addEventListener("change", () => {
+  const name = fileInput.files[0]?.name || "";
+  $("upload-name").textContent = name ? `📄 ${name}` : "";
+  $("pdf-error").textContent   = "";
+  if (name && !name.toLowerCase().endsWith(".pdf")) {
+    $("pdf-error").textContent = "Only PDF files are accepted.";
+  }
+});
+
+// ── Generate button ────────────────────────────────────────────────────────
+let _jobId    = null;
+let _es       = null;   // EventSource
+let _finalDoc = "";
+
+$("generate-btn").addEventListener("click", startGeneration);
+
+async function startGeneration() {
+  // Clear previous errors
+  ["api-key-error","syllabus-error","pdf-error","gen-error","gen-warn"].forEach(id => {
+    const el = $(id);
+    if (el) { el.textContent = ""; el.hidden = true; }
+  });
+
+  const apiKey  = $("api_key").value.trim();
+  const syllabus = $("syllabus").value.trim();
+  const pdfFile  = $("pdf_file").files[0];
+
+  // Client-side validation
+  let hasError = false;
+  if (!apiKey) {
+    showFieldErr("api-key-error", "Groq API key is required.");
+    hasError = true;
+  } else if (!apiKey.startsWith("gsk_")) {
+    showFieldErr("api-key-error", "Invalid key — must start with gsk_.");
+    hasError = true;
+  }
+  if (!syllabus) {
+    showFieldErr("syllabus-error", "Please enter your syllabus.");
+    hasError = true;
+  }
+  if (pdfFile && !pdfFile.name.toLowerCase().endsWith(".pdf")) {
+    showFieldErr("pdf-error", "Only PDF files are accepted.");
+    hasError = true;
+  }
+  if (hasError) return;
+
+  // Reset UI
+  setBusy(true);
+  $("results-card").hidden = true;
+  $("progress-area").hidden = false;
+  $("agent-log").innerHTML  = "";
+  setProgress(3, "Submitting…");
+
+  // Build FormData
+  const fd = new FormData();
+  fd.append("api_key",  apiKey);
+  fd.append("syllabus", syllabus);
+  if (pdfFile) fd.append("pdf_file", pdfFile);
+
+  let res;
+  try {
+    res = await fetch("/generate", { method: "POST", body: fd });
+  } catch (e) {
+    showGenError("Network error — are you connected?");
+    setBusy(false);
+    return;
+  }
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    // Field-level errors from server
+    if (data.error && typeof data.error === "object") {
+      if (data.error.api_key)  showFieldErr("api-key-error", data.error.api_key);
+      if (data.error.syllabus) showFieldErr("syllabus-error", data.error.syllabus);
+      if (data.error.pdf_file) showFieldErr("pdf-error", data.error.pdf_file);
+    } else {
+      showGenError(data.error || "Unknown error.");
+    }
+    setBusy(false);
+    $("progress-area").hidden = true;
+    return;
+  }
+
+  _jobId = data.job_id;
+  startSSE(_jobId);
+}
+
+function startSSE(jobId) {
+  if (_es) _es.close();
+  _es = new EventSource(`/stream/${jobId}`);
+
+  _es.onmessage = evt => {
+    let item;
+    try { item = JSON.parse(evt.data); } catch { return; }
+
+    if (item.event === "heartbeat") return;
+
+    if (item.event === "status") {
+      const d = item.data;
+      setProgress(d.pct || 0, d.msg || "");
+      appendLog(d);
+      // Highlight active pipeline node
+      if (d.node) activateNode(d.node);
+    }
+
+    if (item.event === "done") {
+      setProgress(100, "Notes ready! ✓");
+      _es.close();
+      fetchResult(jobId);
+    }
+
+    if (item.event === "error") {
+      _es.close();
+      setBusy(false);
+      const msg = item.data?.msg || "Generation failed.";
+      // Distinguish key errors
+      if (/auth|401|invalid.*key|api key/i.test(msg)) {
+        showFieldErr("api-key-error", "Invalid or expired API key.");
+        $("key-status").innerHTML = badge("err", "✗ Invalid key");
+      } else if (/rate.?limit|429/i.test(msg)) {
+        showGenWarn("Rate limit hit. Partial notes saved — wait a moment then retry.");
+        fetchResult(jobId);   // show partial
+      } else {
+        showGenError(msg);
+      }
+    }
+  };
+
+  _es.onerror = () => {
+    _es.close();
+    setBusy(false);
+  };
+}
+
+async function fetchResult(jobId) {
+  try {
+    const res  = await fetch(`/result/${jobId}`);
+    const data = await res.json();
+    if (data.status === "done") {
+      _finalDoc = data.doc || "";
+      renderPreview(_finalDoc);
+      setBusy(false);
+      $("results-card").hidden = false;
+      $("results-card").scrollIntoView({ behavior: "smooth", block: "start" });
+    } else if (data.status === "error") {
+      showGenError(data.error || "Generation failed.");
+      setBusy(false);
+    }
+  } catch (e) {
+    showGenError("Could not fetch results.");
+    setBusy(false);
+  }
+}
+
+// ── Download ──────────────────────────────────────────────────────────────
+$("download-btn").addEventListener("click", () => {
+  if (_jobId) window.location.href = `/download/${_jobId}`;
+});
+
+// ── Render preview ─────────────────────────────────────────────────────────
+const SECTION_LABELS = new Set([
+  "Definition","Intuition","Detailed Explanation",
+  "Example","Key Points","Connection",
+]);
+const MARK_LABELS = new Set(["2 Marks","5 Marks","10 Marks"]);
+
+function renderPreview(doc) {
+  const container = $("preview-content");
+  const tocList   = $("toc-list");
+  container.innerHTML = "";
+  tocList.innerHTML   = "";
+
+  const lines = doc.split("\n");
+  let topicIdx = 0;
+
+  lines.forEach(raw => {
+    const line = raw.trim();
+    if (!line) { container.appendChild(document.createElement("br")); return; }
+
+    if (line.startsWith("# ")) {
+      const title = line.slice(2);
+      topicIdx++;
+
+      // TOC entry
+      const li = document.createElement("li");
+      const a  = document.createElement("a");
+      const id = `topic-${topicIdx}`;
+      a.href        = `#${id}`;
+      a.textContent = title;
+      li.appendChild(a);
+      tocList.appendChild(li);
+
+      // Heading
+      const h = document.createElement("h3");
+      h.className = "preview-topic";
+      h.id        = id;
+      h.textContent = title;
+      container.appendChild(h);
+
+      const hr = document.createElement("hr");
+      hr.className = "topic-divider";
+      container.appendChild(hr);
+
+    } else if (SECTION_LABELS.has(line)) {
+      const el = document.createElement("div");
+      el.className  = "section-label";
+      el.textContent = line;
+      container.appendChild(el);
+
+    } else if (MARK_LABELS.has(line)) {
+      const el = document.createElement("div");
+      el.className  = "mark-label";
+      el.textContent = line;
+      container.appendChild(el);
+
+    } else if (line.startsWith("- ")) {
+      const ul = ensureList(container);
+      const li = document.createElement("li");
+      li.textContent = line.slice(2);
+      ul.appendChild(li);
+
+    } else {
+      const p = document.createElement("p");
+      p.textContent = line;
+      container.appendChild(p);
+    }
+  });
+
+  $("toc-panel").hidden = tocList.children.length === 0;
+}
+
+function ensureList(container) {
+  const last = container.lastElementChild;
+  if (last && last.tagName === "UL") return last;
+  const ul = document.createElement("ul");
+  container.appendChild(ul);
+  return ul;
+}
+
+// ── UI helpers ─────────────────────────────────────────────────────────────
+function setProgress(pct, msg) {
+  $("progress-bar").style.width = pct + "%";
+  $("progress-msg").textContent = msg;
+  $("progress-pct").textContent = pct + "%";
+}
+
+function appendLog(d) {
+  if (!d.node || !d.topic) return;
+  const log = $("agent-log");
+  const row = document.createElement("div");
+  row.className = "log-row";
+  row.innerHTML = `<span class="log-node">${d.node.replace(/_/g," ")}</span>
+                   <span class="log-topic">${escHtml(d.topic)}</span>`;
+  log.appendChild(row);
+  log.scrollTop = log.scrollHeight;
+}
+
+function activateNode(node) {
+  document.querySelectorAll(".pipe-step").forEach(el => {
+    el.classList.toggle("pipe-active", el.dataset.node === node);
+  });
+}
+
+function setBusy(busy) {
+  const btn = $("generate-btn");
+  btn.disabled = busy;
+  btn.classList.toggle("loading", busy);
+}
+
+function showFieldErr(id, msg) {
+  const el = $(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.hidden = false;
+}
+
+function showGenError(msg) {
+  const el = $("gen-error");
+  el.textContent = "❌ " + msg;
+  el.hidden = false;
+}
+
+function showGenWarn(msg) {
+  const el = $("gen-warn");
+  el.textContent = "⚠ " + msg;
+  el.hidden = false;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+</script>
+</body>
+</html>
