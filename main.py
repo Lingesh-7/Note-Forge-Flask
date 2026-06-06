@@ -282,26 +282,34 @@ hr { border-color: var(--border) !important; margin: 1.2rem 0 !important; }
 def _build_pdf(text: str, dest: str) -> None:
     """Render *text* to a Unicode-safe PDF at *dest*."""
     pdf = FPDF()
+    pdf.set_margins(left=15, top=15, right=15)
     pdf.add_page()
 
     font_dir = os.path.join(os.path.dirname(__file__), "fonts")
-    pdf.add_font("DejaVu",  "",  os.path.join(font_dir, "DejaVuSans.ttf"),      uni=True)
-    pdf.add_font("DejaVu",  "B", os.path.join(font_dir, "DejaVuSans-Bold.ttf"), uni=True)
-    pdf.set_auto_page_break(auto=True, margin=12)
+    pdf.add_font("DejaVu", "",  os.path.join(font_dir, "DejaVuSans.ttf"),      uni=True)
+    pdf.add_font("DejaVu", "B", os.path.join(font_dir, "DejaVuSans-Bold.ttf"), uni=True)
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    effective_width = pdf.w - pdf.l_margin - pdf.r_margin
 
     for raw in text.split("\n"):
-        line = raw.strip()
+        line = raw.strip().replace("\x00", "").replace("\r", "")
         if not line:
             pdf.ln(3)
-        elif line.startswith("# "):
-            pdf.set_font("DejaVu", "B", 16)
-            pdf.cell(0, 10, line[2:], ln=True)
-        elif line in SECTION_LABELS or line in MARK_LABELS:
-            pdf.set_font("DejaVu", "B", 13)
-            pdf.multi_cell(0, 8, line)
-        else:
-            pdf.set_font("DejaVu", "", 12)
-            pdf.multi_cell(0, 7, line)
+            continue
+        try:
+            if line.startswith("# "):
+                pdf.set_font("DejaVu", "B", 16)
+                pdf.multi_cell(effective_width, 10, line[2:])
+                pdf.ln(1)
+            elif line in SECTION_LABELS or line in MARK_LABELS:
+                pdf.set_font("DejaVu", "B", 13)
+                pdf.multi_cell(effective_width, 8, line)
+            else:
+                pdf.set_font("DejaVu", "", 11)
+                pdf.multi_cell(effective_width, 6, line)
+        except Exception:
+            pdf.ln(3)
 
     pdf.output(dest)
 

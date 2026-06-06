@@ -56,6 +56,7 @@ _jobs_lock = threading.Lock()
 # ── PDF builder ───────────────────────────────────────────────────────────────
 def _build_pdf(text: str, dest: str) -> None:
     pdf = FPDF()
+    pdf.set_margins(left=15, top=15, right=15)
     pdf.add_page()
 
     font_dir = os.path.join(os.path.dirname(__file__), "fonts")
@@ -69,24 +70,34 @@ def _build_pdf(text: str, dest: str) -> None:
     else:
         font_name = "Helvetica"
 
-    pdf.set_auto_page_break(auto=True, margin=12)
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    effective_width = pdf.w - pdf.l_margin - pdf.r_margin
 
     for raw in text.split("\n"):
+        # Sanitise: replace characters that can break fpdf2 layout
         line = raw.strip()
+        line = line.replace("\x00", "").replace("\r", "")
         if not line:
             pdf.ln(3)
-        elif line.startswith("# "):
-            pdf.set_font(font_name, "B", 16)
-            pdf.cell(0, 10, line[2:], ln=True)
-        elif line in SECTION_LABELS or line in MARK_LABELS:
-            pdf.set_font(font_name, "B", 13)
-            pdf.multi_cell(0, 8, line)
-        else:
-            pdf.set_font(font_name, "", 12)
-            pdf.multi_cell(0, 7, line)
+            continue
+
+        try:
+            if line.startswith("# "):
+                pdf.set_font(font_name, "B", 16)
+                pdf.multi_cell(effective_width, 10, line[2:])
+                pdf.ln(1)
+            elif line in SECTION_LABELS or line in MARK_LABELS:
+                pdf.set_font(font_name, "B", 13)
+                pdf.multi_cell(effective_width, 8, line)
+            else:
+                pdf.set_font(font_name, "", 11)
+                pdf.multi_cell(effective_width, 6, line)
+        except Exception:
+            # Skip any single line that still can't render rather than aborting
+            pdf.ln(3)
 
     pdf.output(dest)
-
 
 # ── Background generation worker ──────────────────────────────────────────────
 def _run_generation(job_id: str, syllabus: str, api_key: str,
