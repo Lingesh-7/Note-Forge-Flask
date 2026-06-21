@@ -16,15 +16,7 @@ The system uses an agent-based workflow to:
 - Produce final notes with important questions
 ```
 
----
 
-## 🏗️ Architecture
-
-<p align="center">
-  <img src="image.png" width="600"/>
-</p>
-
----
 
 ## ✨ Features
 
